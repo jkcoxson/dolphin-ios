@@ -25,6 +25,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface MappingUtil : NSObject
 
++ (NSString*)getDeviceDisplayName:(const std::string&)device;
+
 + (NSString*)getLocalizedStringForWiimoteExtension:(WiimoteEmu::ExtensionNumber)extension;
 
 + (void)detectExpressionWithDefaultDevice:(const ciface::Core::DeviceQualifier&)defaultDevice

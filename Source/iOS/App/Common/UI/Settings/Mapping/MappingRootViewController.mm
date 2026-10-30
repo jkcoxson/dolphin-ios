@@ -272,7 +272,7 @@ struct Section {
       
       const auto deviceString = _controller->GetDefaultDevice().ToString();
       if (!deviceString.empty()) {
-        deviceCell.deviceLabel.text = CppToFoundationString(deviceString);
+        deviceCell.deviceLabel.text = [MappingUtil getDeviceDisplayName:deviceString];
       } else {
         // Show at least *something* to make it clear that no device is selected.
         deviceCell.deviceLabel.text = @"—";

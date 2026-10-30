@@ -47,7 +47,7 @@
     const WiimoteSource wiiSource = Config::Get(Config::GetInfoForWiimoteSource(self.portNumber));
     
     typeString = [ControllersSettingsUtil getLocalizedStringForWiimoteSource:wiiSource];
-    _configureEnabled = wiiSource != WiimoteSource::None;
+    _configureEnabled = wiiSource == WiimoteSource::Emulated;
   }
   
   self.typeLabel.text = typeString;

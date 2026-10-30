@@ -11,6 +11,7 @@
 #import "ControllersSettingsUtil.h"
 #import "DOLControllerPortType.h"
 #import "LocalizationUtil.h"
+#import "Swift.h"
 
 @interface ControllersRootViewController ()
 
@@ -23,6 +24,10 @@
 
 - (void)viewDidLoad {
   [super viewDidLoad];
+
+  self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]
+      initWithTitle:@"Bluetooth" style:UIBarButtonItemStylePlain
+      target:self action:@selector(showNintendoBluetooth)];
   
   NSString* gamecubeString = DOLCoreLocalizedStringWithArgs(@"Port %1", @"d");
   NSString* wiiString = DOLCoreLocalizedStringWithArgs(@"Wii Remote %1", @"d");
@@ -34,6 +39,10 @@
     ControllersRootPortCell* wiiCell = self.wiiCells[i];
     wiiCell.portLabel.text = [NSString stringWithFormat:wiiString, i + 1];
   }
+}
+
+- (void)showNintendoBluetooth {
+  [self.navigationController pushViewController:[NintendoBLESettings makeViewController] animated:YES];
 }
 
 - (void)viewWillAppear:(BOOL)animated {

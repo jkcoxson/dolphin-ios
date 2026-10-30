@@ -26,9 +26,10 @@ static const std::array<SerialInterface::SIDevices, 2> kSupportedPadDevices {
   SerialInterface::SIDEVICE_GC_CONTROLLER
 };
 
-static const std::array<WiimoteSource, 2> kSupportedWiimoteSources {
+static const std::array<WiimoteSource, 3> kSupportedWiimoteSources {
   WiimoteSource::None,
-  WiimoteSource::Emulated
+  WiimoteSource::Emulated,
+  WiimoteSource::Real
 };
 
 - (void)viewDidLoad {

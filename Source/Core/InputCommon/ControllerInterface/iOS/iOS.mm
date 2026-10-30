@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "InputCommon/ControllerInterface/iOS/iOS.h"
+#include "InputCommon/ControllerInterface/iOS/NintendoBLE.h"
 
 #include "InputCommon/ControllerInterface/iOS/MFiController.h"
 #include "InputCommon/ControllerInterface/iOS/MFiControllerScanner.h"
@@ -44,6 +45,7 @@ InputBackend::~InputBackend()
 
 void InputBackend::PopulateDevices()
 {
+  PopulateNintendoBLEDevices();
   for (int i = 0; i < 8; ++i)
     g_controller_interface.AddDevice(std::make_shared<ciface::iOS::Touchscreen>(
         i, i >= 4));

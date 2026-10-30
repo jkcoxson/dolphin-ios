@@ -63,6 +63,7 @@
   wsi.type = WindowSystemType::iOS;
   
   UICommon::InitControllers(wsi);
+  [NintendoBLESettings start];
   
   // This technically doesn't send any reports since we disabled analytics...
   // However, it initializes DolphinAnalytics, which we need to do before starting any Wii games.

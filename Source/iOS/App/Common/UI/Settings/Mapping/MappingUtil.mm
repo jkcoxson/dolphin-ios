@@ -18,6 +18,19 @@
 
 @implementation MappingUtil
 
++ (NSString*)getDeviceDisplayName:(const std::string&)device {
+  ciface::Core::DeviceQualifier qualifier;
+  qualifier.FromString(device);
+  if (qualifier.source == "NintendoBLE") {
+    if (qualifier.name.starts_with("NSO GameCube ")) {
+      return @"Previous NSO Controller";
+    }
+    return CppToFoundationString(qualifier.name);
+  }
+  return CppToFoundationString(device);
+}
+
+
 + (NSString*)getLocalizedStringForWiimoteExtension:(WiimoteEmu::ExtensionNumber)extension {
   NSString* localizable;
   switch (extension) {

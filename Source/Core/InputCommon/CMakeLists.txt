@@ -126,6 +126,9 @@ elseif(APPLE AND NOT IOS)
   )
 elseif(IOS)
   target_sources(inputcommon PRIVATE
+    ControllerInterface/iOS/NintendoBLE.cpp
+    ControllerInterface/iOS/NintendoBLE.h
+    ControllerInterface/iOS/NintendoBLESlot.h
     ControllerInterface/iOS/ButtonType.h
     ControllerInterface/iOS/MFiController.h
     ControllerInterface/iOS/MFiController.mm

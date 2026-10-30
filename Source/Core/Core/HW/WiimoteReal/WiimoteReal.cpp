@@ -24,6 +24,9 @@
 #include "Core/HW/WiimoteCommon/DataReport.h"
 #include "Core/HW/WiimoteCommon/WiimoteHid.h"
 #include "Core/HW/WiimoteReal/IOAndroid.h"
+#ifdef IPHONEOS
+#include "Core/HW/WiimoteReal/IOBLE.h"
+#endif
 #include "Core/HW/WiimoteReal/IOLinux.h"
 #include "Core/HW/WiimoteReal/IOWin.h"
 #include "Core/HW/WiimoteReal/IOhidapi.h"
@@ -98,8 +101,12 @@ static void TryToFillWiimoteSlot(u32 index)
       return;
   }
 
-  if (TryToConnectWiimoteToSlot(s_wiimote_pool.front().wiimote, index))
-    s_wiimote_pool.erase(s_wiimote_pool.begin());
+  const auto entry = std::ranges::find_if(s_wiimote_pool, [index](const auto& entry) {
+    const auto slot = entry.wiimote->GetPreferredSlot();
+    return !slot || *slot == index;
+  });
+  if (entry != s_wiimote_pool.end() && TryToConnectWiimoteToSlot(entry->wiimote, index))
+    s_wiimote_pool.erase(entry);
 }
 
 void PopulateDevices()
@@ -697,6 +704,9 @@ void WiimoteScanner::ThreadFunc()
     m_backends.emplace_back(std::make_unique<WiimoteScannerAndroid>());
     m_backends.emplace_back(std::make_unique<WiimoteScannerWindows>());
     m_backends.emplace_back(std::make_unique<WiimoteScannerHidapi>());
+#ifdef IPHONEOS
+    m_backends.emplace_back(std::make_unique<WiimoteScannerBLE>());
+#endif
   }
 
   while (m_scan_thread_running.IsSet())
@@ -864,13 +874,20 @@ void Initialize(::Wiimote::InitializeMode init_mode)
 {
   if (!s_real_wiimotes_initialized)
   {
-    // s_wiimote_scanner.StartThread();
+#ifdef IPHONEOS
+    s_wiimote_scanner.StartThread();
+#endif
   }
 
+#ifdef IPHONEOS
+  // This only polls connections explicitly selected by the app, not the radio.
+  s_wiimote_scanner.SetScanMode(WiimoteScanMode::CONTINUOUSLY_SCAN);
+#else
   if (Config::Get(Config::MAIN_WIIMOTE_CONTINUOUS_SCANNING))
     s_wiimote_scanner.SetScanMode(WiimoteScanMode::CONTINUOUSLY_SCAN);
   else
     s_wiimote_scanner.SetScanMode(WiimoteScanMode::DO_NOT_SCAN);
+#endif
 
   // wait for connection because it should exist before state load
   if (init_mode == ::Wiimote::InitializeMode::DO_WAIT_FOR_WIIMOTES)

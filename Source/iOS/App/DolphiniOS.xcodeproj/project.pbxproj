@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B1E000000000000000000003 /* NintendoBLE in Frameworks */ = {isa = PBXBuildFile; productRef = B1E000000000000000000002 /* NintendoBLE */; };
+		B1E000000000000000000204 /* NintendoBLESettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E000000000000000000104 /* NintendoBLESettingsView.swift */; };
+		B1E000000000000000000203 /* GameCubeBLEManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E000000000000000000103 /* GameCubeBLEManager.swift */; };
+		B1E000000000000000000202 /* WiiRemoteSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E000000000000000000102 /* WiiRemoteSettingsView.swift */; };
+		B1E000000000000000000201 /* WiiRemoteBridgeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E000000000000000000101 /* WiiRemoteBridgeManager.swift */; };
+		B1E000000000000000000200 /* WiiBridgeMetadataRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E000000000000000000100 /* WiiBridgeMetadataRefresh.swift */; };
 		B900A7A127F255EF000361DD /* libdolphin.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = B9476B2427F23FFE009C0A4B /* libdolphin.dylib */; platformFilter = ios; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		B900A7A727F26F61000361DD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B900A7A627F26F61000361DD /* AppDelegate.swift */; };
 		B900A7AE27F27F36000361DD /* DolphinCoreService.mm in Sources */ = {isa = PBXBuildFile; fileRef = B900A7AD27F27F36000361DD /* DolphinCoreService.mm */; };
@@ -223,6 +229,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B1E000000000000000000104 /* NintendoBLESettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controllers/NintendoBLE/NintendoBLESettingsView.swift; sourceTree = "<group>"; };
+		B1E000000000000000000103 /* GameCubeBLEManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controllers/NintendoBLE/GameCubeBLEManager.swift; sourceTree = "<group>"; };
+		B1E000000000000000000102 /* WiiRemoteSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controllers/NintendoBLE/WiiRemoteSettingsView.swift; sourceTree = "<group>"; };
+		B1E000000000000000000101 /* WiiRemoteBridgeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controllers/NintendoBLE/WiiRemoteBridgeManager.swift; sourceTree = "<group>"; };
+		B1E000000000000000000100 /* WiiBridgeMetadataRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Controllers/NintendoBLE/WiiBridgeMetadataRefresh.swift; sourceTree = "<group>"; };
 		B900A7A227F25718000361DD /* Common.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Common.xcconfig; sourceTree = "<group>"; };
 		B900A7A627F26F61000361DD /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		B900A7AC27F27F36000361DD /* DolphinCoreService.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DolphinCoreService.h; sourceTree = "<group>"; };
@@ -591,6 +602,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B1E000000000000000000003 /* NintendoBLE in Frameworks */,
 				B95AC5302D29C7FD0048E48B /* AVFoundation.framework in Frameworks */,
 				B97C49B6297F8B0D00E30877 /* UniformTypeIdentifiers.framework in Frameworks */,
 				B9FCB7DE28988E7E0020E233 /* AltKit in Frameworks */,
@@ -619,6 +631,11 @@
 		B900A7A427F26F17000361DD /* Common */ = {
 			isa = PBXGroup;
 			children = (
+				B1E000000000000000000104 /* NintendoBLESettingsView.swift */,
+				B1E000000000000000000103 /* GameCubeBLEManager.swift */,
+				B1E000000000000000000102 /* WiiRemoteSettingsView.swift */,
+				B1E000000000000000000101 /* WiiRemoteBridgeManager.swift */,
+				B1E000000000000000000100 /* WiiBridgeMetadataRefresh.swift */,
 				B95AC5242D29B9100048E48B /* Audio */,
 				B9B2C65C288E481300CB6569 /* Emulation */,
 				B974923D296035E500794509 /* Fastmem */,
@@ -1765,6 +1782,7 @@
 			);
 			name = DolphiniOS;
 			packageProductDependencies = (
+				B1E000000000000000000002 /* NintendoBLE */,
 				B900A7D127F5228B000361DD /* UICollectionViewLeftAlignedLayout */,
 				B9FCB7DD28988E7E0020E233 /* AltKit */,
 				B97E4B482964CBA100B3EE9C /* FirebaseAnalyticsWithoutAdIdSupport */,
@@ -1805,6 +1823,7 @@
 			);
 			mainGroup = B9DC3DED27EFBD2C0084DAA4;
 			packageReferences = (
+				B1E000000000000000000001 /* XCLocalSwiftPackageReference "ios_ble_nintendo" */,
 				B900A7D027F5228B000361DD /* XCRemoteSwiftPackageReference "UICollectionViewLeftAlignedLayout" */,
 				B9FCB7DC28988E7E0020E233 /* XCRemoteSwiftPackageReference "AltKit" */,
 				B97E4B472964CBA100B3EE9C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
@@ -2002,6 +2021,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B1E000000000000000000204 /* NintendoBLESettingsView.swift in Sources */,
+				B1E000000000000000000203 /* GameCubeBLEManager.swift in Sources */,
+				B1E000000000000000000202 /* WiiRemoteSettingsView.swift in Sources */,
+				B1E000000000000000000201 /* WiiRemoteBridgeManager.swift in Sources */,
+				B1E000000000000000000200 /* WiiBridgeMetadataRefresh.swift in Sources */,
 				B950CFAA29616B4F00197719 /* MainSceneCoordinator.m in Sources */,
 				B904AD092887DAF1008B6BE9 /* ControllersTypeViewController.mm in Sources */,
 				B9913785288146D700588446 /* WiiAspectRatioViewController.mm in Sources */,
@@ -3610,7 +3634,19 @@
 		};
 /* End XCRemoteSwiftPackageReference section */
 
+/* Begin XCLocalSwiftPackageReference section */
+        B1E000000000000000000001 /* XCLocalSwiftPackageReference "ios_ble_nintendo" */ = {
+            isa = XCLocalSwiftPackageReference;
+            relativePath = ../../../../ios_ble_nintendo;
+        };
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+        B1E000000000000000000002 /* NintendoBLE */ = {
+            isa = XCSwiftPackageProductDependency;
+            package = B1E000000000000000000001 /* XCLocalSwiftPackageReference "ios_ble_nintendo" */;
+            productName = NintendoBLE;
+        };
 		B900A7D127F5228B000361DD /* UICollectionViewLeftAlignedLayout */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B900A7D027F5228B000361DD /* XCRemoteSwiftPackageReference "UICollectionViewLeftAlignedLayout" */;

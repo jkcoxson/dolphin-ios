@@ -812,3 +812,7 @@ if(USE_RETRO_ACHIEVEMENTS)
     target_compile_definitions(core PUBLIC -DRC_CLIENT_SUPPORTS_RAINTEGRATION)
   endif()
 endif()
+
+if(IOS)
+  target_sources(core PRIVATE HW/WiimoteReal/IOBLE.cpp HW/WiimoteReal/IOBLE.h HW/WiimoteReal/BLEReportQueue.h)
+endif()

@@ -16,6 +16,7 @@
 #import "LocalizationUtil.h"
 #import "MappingDeviceCell.h"
 #import "MappingDeviceViewControllerDelegate.h"
+#import "MappingUtil.h"
 
 struct Device {
   std::string actualName;
@@ -66,7 +67,7 @@ struct Device {
     }
     
     _devices.push_back(name);
-    [_deviceNames addObject:CppToFoundationString(name)];
+    [_deviceNames addObject:[MappingUtil getDeviceDisplayName:name]];
   }
   
   _lastSelected = -1;
@@ -86,7 +87,7 @@ struct Device {
   if (_lastSelected == -1) {
     _devices.push_back(defaultDevice);
     
-    NSString* foundationDeviceName = CppToFoundationString(defaultDevice);
+    NSString* foundationDeviceName = [MappingUtil getDeviceDisplayName:defaultDevice];
     [_deviceNames addObject:[NSString stringWithFormat:@"[%@] %@", DOLCoreLocalizedString(@"disconnected"), foundationDeviceName]];
     
     _lastSelected = _devices.size() - 1;
@@ -142,7 +143,9 @@ struct Device {
     bool isTouchscreen = qualifier.source == "iOS";
     bool isMFiPhysicalController = qualifier.source == "MFi" && qualifier.name != "Keyboard";
     
-    if (isTouchscreen || isMFiPhysicalController) {
+    bool isNintendoBLE = qualifier.source == "NintendoBLE";
+
+    if (isTouchscreen || isMFiPhysicalController || isNintendoBLE) {
       UIAlertController* alertController = [UIAlertController alertControllerWithTitle:@"Load Defaults" message:@"Would you like to load the default profile for this device type?\n\nWARNING: If you choose to proceed, your current configuration will be overwritten." preferredStyle:UIAlertControllerStyleAlert];
       
       [alertController addAction:[UIAlertAction actionWithTitle:@"Load" style:UIAlertActionStyleDestructive handler:^(UIAlertAction*) {
@@ -150,6 +153,8 @@ struct Device {
         
         if (isTouchscreen) {
           iniName = "Touchscreen";
+        } else if (isNintendoBLE && self.inputConfig->GetProfileDirectoryName() == "GCPad") {
+          iniName = "NSO GameCube";
         } else {
           iniName = "Physical Controller";
         }

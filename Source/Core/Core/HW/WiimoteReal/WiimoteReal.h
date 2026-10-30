@@ -6,6 +6,7 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <vector>
@@ -57,6 +58,8 @@ public:
   void Shutdown();
 
   virtual std::string GetId() const = 0;
+  // BLE bridge player slots persist across another remote disconnecting.
+  virtual std::optional<unsigned int> GetPreferredSlot() const { return std::nullopt; }
 
   bool GetNextReport(Report* report);
 

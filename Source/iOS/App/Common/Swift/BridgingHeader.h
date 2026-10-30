@@ -21,3 +21,6 @@
 #import "DOLUIKitSwitch.h"
 #import "TCManagerInterface.h"
 #endif
+
+#import "Core/HW/WiimoteReal/IOBLE.h"
+#import "InputCommon/ControllerInterface/iOS/NintendoBLE.h"
