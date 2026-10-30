@@ -34,6 +34,10 @@
   [super viewDidLoad];
   
   _didStartEmulation = false;
+
+  // The navigation bar overlays gameplay; it must not resize the root view.
+  self.edgesForExtendedLayout = UIRectEdgeAll;
+  self.extendedLayoutIncludesOpaqueBars = YES;
   
   [[EmulationCoordinator shared] registerMainDisplayView:self.rendererView];
   
@@ -144,18 +148,6 @@
   [self.navigationController setNavigationBarHidden:hidden animated:true];
   
   [self setNeedsStatusBarAppearanceUpdate];
-  
-  // Adjust the safe area insets.
-  UIEdgeInsets insets = self.additionalSafeAreaInsets;
-  if (hidden) {
-    insets.top = 0;
-  } else {
-    // The safe area should extend behind the navigation bar.
-    // This makes the bar "float" on top of the content.
-    insets.top = -(self.navigationController.navigationBar.bounds.size.height);
-  }
-  
-  self.additionalSafeAreaInsets = insets;
 }
 
 - (BOOL)prefersStatusBarHidden {

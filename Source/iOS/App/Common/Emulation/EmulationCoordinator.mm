@@ -24,6 +24,32 @@
 #import "HostQueue.h"
 #import "JitManager.h"
 
+@interface EmulationMetalView : MTKView
+@end
+
+@implementation EmulationMetalView {
+  CGSize _lastSurfaceSize;
+  CGFloat _lastSurfaceScale;
+}
+
+- (void)layoutSubviews {
+  [super layoutSubviews];
+
+  // Notify the core after the actual Metal surface resizes, not while its parent
+  // is still laying out the old display during a fold transition.
+  CGSize size = self.bounds.size;
+  CGFloat scale = self.contentScaleFactor;
+  if (!CGSizeEqualToSize(size, _lastSurfaceSize) || scale != _lastSurfaceScale) {
+    _lastSurfaceSize = size;
+    _lastSurfaceScale = scale;
+    if (g_presenter) {
+      g_presenter->ResizeSurface();
+    }
+  }
+}
+
+@end
+
 @implementation EmulationCoordinator {
   MTKView* _mtkView;
   CAMetalLayer* _metalLayer;
@@ -45,7 +71,7 @@
 
 - (id)init {
   if (self = [super init]) {
-    _mtkView = [[MTKView alloc] init];
+    _mtkView = [[EmulationMetalView alloc] init];
     _mtkView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     _mtkView.preferredFramesPerSecond = 120;
     

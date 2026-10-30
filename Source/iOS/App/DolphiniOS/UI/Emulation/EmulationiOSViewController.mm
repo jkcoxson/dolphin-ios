@@ -282,10 +282,19 @@ typedef NS_ENUM(NSInteger, DOLEmulationVisibleTouchPad) {
   self.navigationItem.leftBarButtonItem.menu = [UIMenu menuWithChildren:menuItems];
 }
 
+- (void)viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator {
+  [super viewWillTransitionToSize:size withTransitionCoordinator:coordinator];
+
+  [coordinator animateAlongsideTransition:nil completion:^(id<UIViewControllerTransitionCoordinatorContext> context) {
+    // The window's camera regions and insets may settle after the fold animation.
+    [self.view setNeedsUpdateConstraints];
+    [self.view setNeedsLayout];
+    [self.view layoutIfNeeded];
+  }];
+}
+
 - (void)viewDidLayoutSubviews {
-  if (g_presenter) {
-    g_presenter->ResizeSurface();
-  }
+  [super viewDidLayoutSubviews];
 
   [[TCDeviceMotion shared] statusBarOrientationChanged];
 
@@ -440,7 +449,9 @@ typedef NS_ENUM(NSInteger, DOLEmulationVisibleTouchPad) {
 
       [wiiPadView setTouchIRMode:irMode];
       [wiiPadView resetPointer];
-      [wiiPadView recalculatePointerValuesWithNew_rect:self.rendererView.bounds game_aspect:g_presenter->CalculateDrawAspectRatio()];
+      // The renderer extends beyond the touch pad's safe area on displays with side insets.
+      CGRect rendererRect = [self.rendererView convertRect:self.rendererView.bounds toView:wiiPadView];
+      [wiiPadView recalculatePointerValuesWithNew_rect:rendererRect game_aspect:g_presenter->CalculateDrawAspectRatio()];
     }
   }
 }

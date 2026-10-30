@@ -64,7 +64,6 @@ static bool MsgAlert(const char* caption, const char* text, bool question, Commo
   
   dispatch_async(dispatch_get_main_queue(), ^{
     UIWindow* window = [[UIWindow alloc] initWithWindowScene:mainScene];
-    window.frame = [UIScreen mainScreen].bounds;
     window.rootViewController = [[UIViewController alloc] init];
     window.windowLevel = UIWindowLevelAlert;
     

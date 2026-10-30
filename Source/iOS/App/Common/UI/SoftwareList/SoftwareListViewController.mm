@@ -133,7 +133,10 @@
   const CGFloat cellHeight = 218.f;
   
   CGFloat totalSpacing = ((cellsPerRow - 1) * cellSpacing);
-  return CGSizeMake((collectionView.bounds.size.width - totalSpacing) / cellsPerRow, cellHeight);
+  // Native bars on iPhone Duo can inset the collection view from either side.
+  UIEdgeInsets insets = collectionView.adjustedContentInset;
+  CGFloat availableWidth = collectionView.bounds.size.width - insets.left - insets.right;
+  return CGSizeMake((availableWidth - totalSpacing) / cellsPerRow, cellHeight);
 }
 
 #pragma mark Segue

@@ -15,8 +15,10 @@ jobs:
         with:
           submodules: 'recursive'
 
-      # - name: Set Xcode Version
-      #   run: sudo xcode-select -s /Applications/Xcode_14.2.app
+      - name: Verify iOS 27.1 SDK
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos27.1 --show-sdk-path
 
       # - name: Install Build Utilities
       #   run: |
@@ -55,7 +57,7 @@ jobs:
 
       - name: Build Application
         env:
-          XCODE_COMMON_BUILD_ARGS: -project Source/iOS/App/DolphiniOS.xcodeproj -derivedDataPath "${{ github.workspace }}/build-Xcode" -sdk iphoneos -destination generic/platform=iOS DOL_PBID_ORGANIZATION_IDENTIFIER="me.oatmealdome" DOL_BUILD_SOURCE="official" CURRENT_PROJECT_VERSION=${{ github.run_number }} CODE_SIGNING_ALLOWED="NO" CODE_SIGNING_REQUIRED="NO"
+          XCODE_COMMON_BUILD_ARGS: -project Source/iOS/App/DolphiniOS.xcodeproj -derivedDataPath "${{ github.workspace }}/build-Xcode" -sdk iphoneos27.1 -destination generic/platform=iOS DOL_PBID_ORGANIZATION_IDENTIFIER="me.oatmealdome" DOL_BUILD_SOURCE="official" CURRENT_PROJECT_VERSION=${{ github.run_number }} CODE_SIGNING_ALLOWED="NO" CODE_SIGNING_REQUIRED="NO"
         run: |
           rm -rf "${{ github.workspace }}/archives" || true
           mkdir "${{ github.workspace }}/archives"
