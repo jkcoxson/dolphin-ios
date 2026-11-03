@@ -34,6 +34,8 @@ public:
 
   virtual void EventLinked() = 0;
   virtual void EventUnlinked() = 0;
+  // Only the Wii software explicitly ending a link requests physical power-off.
+  virtual void EventGuestDisconnect() {}
 
   virtual u8 GetWiimoteDeviceIndex() const = 0;
   virtual void SetWiimoteDeviceIndex(u8 index) = 0;

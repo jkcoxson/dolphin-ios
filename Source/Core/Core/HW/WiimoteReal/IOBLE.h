@@ -14,6 +14,7 @@ extern "C" {
 uint64_t DOLWiiBLEAdd(uint8_t player);
 void DOLWiiBLERemove(uint64_t handle);
 bool DOLWiiBLEHealthy(uint64_t handle);
+bool DOLWiiBLETakePowerOffRequest(uint64_t handle);
 void DOLWiiBLEReceive(uint64_t handle, const uint8_t* data, size_t size);
 size_t DOLWiiBLEPeekOutput(uint64_t handle, uint8_t* data, size_t capacity, uint64_t* token);
 void DOLWiiBLECompleteOutput(uint64_t handle, uint64_t token, bool success);

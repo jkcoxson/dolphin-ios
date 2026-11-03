@@ -278,6 +278,8 @@ void WiimoteDevice::EventDisconnect(u8 reason)
       fmt::format("Wii Remote {} disconnected by emulated software", GetNumber() + 1),
       CONNECTION_MESSAGE_TIME);
 
+  if (m_hid_source)
+    m_hid_source->EventGuestDisconnect();
   Reset();
 }
 

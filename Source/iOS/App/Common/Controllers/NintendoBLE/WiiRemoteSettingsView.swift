@@ -175,7 +175,11 @@ struct WiiRemoteSettingsView: View {
         }
         .environment(\.editMode, .constant(bridge.remoteControlSupported && bridge.connectedSlots.count > 1 ? .active : .inactive))
         .navigationTitle("Wii Remotes")
-        .onDisappear { bridge.stopManualSearch() }
+        .onAppear { bridge.setSettingsVisible(true) }
+        .onDisappear {
+            bridge.setSettingsVisible(false)
+            bridge.stopManualSearch()
+        }
         .sheet(item: $renameTarget) { target in
             WiiBridgeRenameView(name: target.name) { name in
                 if let remote = target.remote { bridge.renameRememberedRemote(remote, name: name) }

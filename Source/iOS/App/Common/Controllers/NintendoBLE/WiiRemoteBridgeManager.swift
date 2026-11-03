@@ -34,6 +34,7 @@ final class WiiRemoteBridgeManager: ObservableObject {
     @Published private(set) var playerOrder: [UInt8] = [0, 1, 2, 3]
     @Published private(set) var disconnectedRemoteSlots = Set<UInt8>()
     private var hasStablePlayerStatus = false
+    private var settingsVisible = false
     private var pausedOutputSlots = Set<UInt8>()
     @Published private(set) var isManaging = false
     @Published private(set) var connectionDetail = "Not connected"
@@ -51,6 +52,7 @@ final class WiiRemoteBridgeManager: ObservableObject {
     private var nativePlayers: [UInt8: UInt8] = [:]
     private var outputTimer: Timer?
     private var pendingOutput: [UInt8: UUID] = [:]
+    private var poweringOffSlots = Set<UInt8>()
     private var outputRetryAfter: [UInt8: TimeInterval] = [:]
     private var observers: [NSObjectProtocol] = []
     private var retryTask: Task<Void, Never>?
@@ -135,7 +137,7 @@ final class WiiRemoteBridgeManager: ObservableObject {
                 self.remoteControlSupported = self.client.supportsRemoteControl(id)
                 self.rememberedRosterSupported = self.client.supportsRememberedRemotes(id)
                 self.startOutputPump()
-                self.refreshNames()
+                if self.settingsVisible { self.refreshNames() }
             case .disconnected, .failed:
                 self.connectionGeneration += 1
                 self.managementTask?.cancel()
@@ -171,16 +173,17 @@ final class WiiRemoteBridgeManager: ObservableObject {
                 self.remoteSlotGeneration[slot, default: 0] += 1
                 self.remoteInfo[slot] = nil
             }
-            if self.managementSupported && !added.isEmpty {
+            if self.managementSupported && self.settingsVisible && !added.isEmpty {
                 self.metadata.request(Set(added.map { .remote($0) }), delay: 3)
             }
             if self.rememberedRosterSupported && !changedSlots.isEmpty {
                 self.rosterRevision += 1
-                self.metadata.request([.roster], delay: 3)
+                if self.settingsVisible { self.metadata.request([.roster], delay: 3) }
             }
         }
         client.onWiiReport = { [weak self] id, report in
             guard let self, self.selected?.id == id, let handle = self.handles[report.slot] else { return }
+            if report.data.first == 0x20 { self.log("Status reply received from bridge slot \(report.slot)") }
             report.data.withUnsafeBytes { bytes in
                 DOLWiiBLEReceive(handle, bytes.bindMemory(to: UInt8.self).baseAddress, bytes.count)
             }
@@ -379,6 +382,10 @@ final class WiiRemoteBridgeManager: ObservableObject {
             else { applyPlayerState(state) }
         }
     }
+    func setSettingsVisible(_ visible: Bool) {
+        settingsVisible = visible
+        if visible { refreshNames() }
+    }
     func refreshNames() {
         guard connection == .ready, managementSupported else { return }
         var items: Set<WiiBridgeMetadataRefresh.Item> = [.bridge, .remote(0), .remote(1), .remote(2), .remote(3), .players]
@@ -456,6 +463,7 @@ final class WiiRemoteBridgeManager: ObservableObject {
             handles[slot] = DOLWiiBLEAdd(player)
             nativePlayers[slot] = player
             pendingOutput[slot] = nil
+            poweringOffSlots.remove(slot)
             outputRetryAfter[slot] = nil
         }
     }
@@ -510,6 +518,7 @@ final class WiiRemoteBridgeManager: ObservableObject {
             nativePlayers[slot] = nil
             pendingOutput.removeValue(forKey: slot)
             outputRetryAfter.removeValue(forKey: slot)
+            poweringOffSlots.remove(slot)
             changed = true
         }
         for slot in slots.sorted() where handles[slot] == nil {
@@ -539,6 +548,7 @@ final class WiiRemoteBridgeManager: ObservableObject {
         for handle in handles.values { DOLWiiBLERemove(handle) }
         handles.removeAll()
         pendingOutput.removeAll()
+        poweringOffSlots.removeAll()
         outputRetryAfter.removeAll()
         connectedSlots = []
         rememberedRemotes = []
@@ -559,11 +569,39 @@ final class WiiRemoteBridgeManager: ObservableObject {
         RunLoop.main.add(timer, forMode: .common)
     }
 
+    private func powerOffAfterEmulatedDisconnect(slot: UInt8, handle: UInt64, bridgeID: UUID) async {
+        do {
+            guard client.supportsRemotePowerOff(bridgeID) else {
+                throw BridgeManagementError.unsupported
+            }
+            let remote: BridgeDeviceInfo
+            if let cached = remoteInfo[slot] { remote = cached }
+            else { remote = try await client.remoteInfo(slot: slot, via: bridgeID) }
+            guard connection == .ready, selected?.id == bridgeID, handles[slot] == handle else {
+                poweringOffSlots.remove(slot)
+                return
+            }
+            try await client.powerOffRemote(remote, slot: slot, via: bridgeID)
+            log("Powered off Wii Remote \(slot + 1) after emulated software disconnected it")
+        } catch {
+            if handles[slot] == handle { poweringOffSlots.remove(slot) }
+            log("Could not power off Wii Remote \(slot + 1): \(error.localizedDescription)")
+        }
+    }
+
     private func drainOutput() {
         guard connection == .ready, let selected else { return }
         var bytes = [UInt8](repeating: 0, count: 22)
         for slot in handles.keys.sorted() {
             guard let handle = handles[slot], !pausedOutputSlots.contains(slot) else { continue }
+            if DOLWiiBLETakePowerOffRequest(handle) {
+                poweringOffSlots.insert(slot)
+                Task { @MainActor [weak self] in
+                    await self?.powerOffAfterEmulatedDisconnect(slot: slot, handle: handle, bridgeID: selected.id)
+                }
+                continue
+            }
+            guard !poweringOffSlots.contains(slot) else { continue }
             if !DOLWiiBLEHealthy(handle), let player = nativePlayers[slot] {
                 DOLWiiBLERemove(handle)
                 handles[slot] = DOLWiiBLEAdd(player)
@@ -582,6 +620,7 @@ final class WiiRemoteBridgeManager: ObservableObject {
                 DOLWiiBLEPeekOutput(handle, $0.baseAddress, $0.count, &command)
             }
             guard count > 0 else { continue }
+            let isStatusRequest = bytes[0] == 0x15
             let token = UUID()
             pendingOutput[slot] = token
             do {
@@ -597,6 +636,9 @@ final class WiiRemoteBridgeManager: ObservableObject {
                         self.log("Remote \(slot + 1) output rejected: \(error.localizedDescription)")
                     }
                     DOLWiiBLECompleteOutput(handle, command, result.isSuccess)
+                    if isStatusRequest && result.isSuccess {
+                        self.log("Status request sent to bridge slot \(slot)")
+                    }
                 }
             } catch NintendoBLEError.notReady {
                 pendingOutput.removeValue(forKey: slot) // Status will reconcile a departing slot.

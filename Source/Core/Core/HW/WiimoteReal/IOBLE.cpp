@@ -3,12 +3,14 @@
 
 #include "Core/HW/WiimoteReal/IOBLE.h"
 
+#include <atomic>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
 
 #include "Core/HW/WiimoteReal/BLEReportQueue.h"
+#include "Core/HW/WiimoteCommon/WiimoteReport.h"
 
 namespace
 {
@@ -17,6 +19,7 @@ struct Remote
   uint64_t handle;
   uint8_t player;
   std::atomic<bool> active{false};
+  std::atomic<bool> power_off_requested{false};
   WiimoteReal::BLEReportQueue reports;
 };
 std::mutex s_mutex;
@@ -38,6 +41,24 @@ public:
   std::string GetId() const override { return "BLE/" + std::to_string(m_remote->handle); }
   std::optional<unsigned int> GetPreferredSlot() const override { return m_remote->player; }
   bool IsConnected() const override { return m_connected && m_remote->reports.IsConnected(); }
+  void EventLinked() override
+  {
+    WiimoteReal::Wiimote::EventLinked();
+    m_status_after_hid_link_requested = false;
+  }
+  void PrepareInput(WiimoteEmu::DesiredWiimoteState* state, SensorBarState sensor_bar_state) override
+  {
+    // This callback begins only when the emulated HID interrupt channel is ready.
+    // An earlier transport status can be lost before that channel exists.
+    if (!m_status_after_hid_link_requested)
+    {
+      m_status_after_hid_link_requested = true;
+      WiimoteCommon::OutputReportRequestStatus status{};
+      QueueReport(status);
+    }
+    WiimoteReal::Wiimote::PrepareInput(state, sensor_bar_state);
+  }
+  void EventGuestDisconnect() override { m_remote->power_off_requested = true; }
 
 private:
   bool ConnectInternal() override
@@ -61,6 +82,7 @@ private:
   void IOWakeup() override { m_remote->reports.Wakeup(); }
   std::shared_ptr<Remote> m_remote;
   std::atomic<bool> m_connected{false};
+  bool m_status_after_hid_link_requested = false;
 };
 }
 
@@ -90,6 +112,12 @@ bool DOLWiiBLEHealthy(uint64_t handle)
 {
   const auto remote = Find(handle);
   return remote && remote->reports.IsConnected();
+}
+
+bool DOLWiiBLETakePowerOffRequest(uint64_t handle)
+{
+  const auto remote = Find(handle);
+  return remote && remote->power_off_requested.exchange(false);
 }
 
 void DOLWiiBLEReceive(uint64_t handle, const uint8_t* data, size_t size)
