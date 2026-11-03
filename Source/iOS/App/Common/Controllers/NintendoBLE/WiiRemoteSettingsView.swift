@@ -10,9 +10,11 @@ struct WiiRemoteSettingsView: View {
     private struct RenameTarget: Identifiable {
         let id = UUID()
         let slot: UInt8?
+        let remote: BridgeRememberedRemote?
         let name: String
     }
     @State private var renameTarget: RenameTarget?
+    @State private var forgetTarget: BridgeRememberedRemote?
 
     private var canConnectBridge: Bool { bridge.connection != .ready && bridge.connection != .connecting }
     private var sleepingSlots: [UInt8] {
@@ -33,7 +35,7 @@ struct WiiRemoteSettingsView: View {
                 if let selected = bridge.selected {
                     HStack(spacing: 12) {
                         Button {
-                            renameTarget = RenameTarget(slot: nil, name: selected.name)
+                            renameTarget = RenameTarget(slot: nil, remote: nil, name: selected.name)
                         } label: {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(selected.name).foregroundColor(.primary)
@@ -90,7 +92,12 @@ struct WiiRemoteSettingsView: View {
                     }
                 }
 
-                if !sleepingSlots.isEmpty {
+                if bridge.rememberedRosterSupported {
+                    Section(header: Text("Remembered Remotes")) {
+                        ForEach(bridge.rememberedRemotes) { remote in rememberedRow(remote) }
+                    }
+                }
+                if !bridge.rememberedRosterSupported && !sleepingSlots.isEmpty {
                     Section(header: Text("Other Remotes")) {
                         ForEach(sleepingSlots, id: \.self) { slot in remoteRow(slot, connected: false) }
                     }
@@ -171,16 +178,47 @@ struct WiiRemoteSettingsView: View {
         .onDisappear { bridge.stopManualSearch() }
         .sheet(item: $renameTarget) { target in
             WiiBridgeRenameView(name: target.name) { name in
-                if let slot = target.slot { bridge.renameRemote(slot: slot, name: name) }
+                if let remote = target.remote { bridge.renameRememberedRemote(remote, name: name) }
+                else if let slot = target.slot { bridge.renameRemote(slot: slot, name: name) }
                 else { bridge.renameBridge(name) }
             }
+        }
+        .alert(item: $forgetTarget) { remote in
+            Alert(
+                title: Text("Forget \(remote.name)?"),
+                message: Text("The bridge will restart and disconnect active Wii Remotes."),
+                primaryButton: .destructive(Text("Forget")) { bridge.forgetRememberedRemote(remote) },
+                secondaryButton: .cancel()
+            )
+        }
+    }
+
+    private func rememberedRow(_ remote: BridgeRememberedRemote) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(remote.name)
+                if let slot = remote.slot, bridge.connectedSlots.contains(slot) {
+                    Text("Player \(bridge.playerNumber(for: slot) ?? 1)")
+                        .font(.caption).foregroundColor(.secondary)
+                } else {
+                    Text(remote.slot == nil ? "Remembered · no live slot" : "Asleep")
+                        .font(.caption).foregroundColor(.secondary)
+                }
+            }
+            Spacer()
+            Button("Rename") {
+                renameTarget = RenameTarget(slot: nil, remote: remote, name: remote.name)
+            }
+            .buttonStyle(.borderless).disabled(bridge.isManaging)
+            Button("Forget") { forgetTarget = remote }
+                .buttonStyle(.borderless).disabled(bridge.isManaging)
         }
     }
 
     private func remoteRow(_ slot: UInt8, connected: Bool) -> some View {
         HStack(spacing: 12) {
             Button {
-                renameTarget = RenameTarget(slot: slot, name: bridge.remoteName(slot))
+                renameTarget = RenameTarget(slot: slot, remote: nil, name: bridge.remoteName(slot))
             } label: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(bridge.remoteName(slot)).foregroundColor(.primary)

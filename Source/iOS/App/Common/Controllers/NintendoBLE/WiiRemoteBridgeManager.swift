@@ -27,8 +27,10 @@ final class WiiRemoteBridgeManager: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published private(set) var savedBridges: [SavedBridge] = []
     @Published private(set) var remoteInfo: [UInt8: BridgeDeviceInfo] = [:]
+    @Published private(set) var rememberedRemotes: [BridgeRememberedRemote] = []
     @Published private(set) var managementSupported = false
     @Published private(set) var remoteControlSupported = false
+    @Published private(set) var rememberedRosterSupported = false
     @Published private(set) var playerOrder: [UInt8] = [0, 1, 2, 3]
     @Published private(set) var disconnectedRemoteSlots = Set<UInt8>()
     private var hasStablePlayerStatus = false
@@ -66,6 +68,8 @@ final class WiiRemoteBridgeManager: ObservableObject {
     private var pendingManualConnection = false
     private var intentionalDisconnect = false
     private var connectionGeneration = 0
+    private var remoteSlotGeneration: [UInt8: Int] = [:]
+    private var rosterRevision = 0
 
     private init() {
         let defaults = UserDefaults.standard
@@ -129,6 +133,7 @@ final class WiiRemoteBridgeManager: ObservableObject {
                 if let selected = self.selected { self.remember(id: id, name: selected.name) }
                 self.managementSupported = self.client.supportsBridgeManagement(id)
                 self.remoteControlSupported = self.client.supportsRemoteControl(id)
+                self.rememberedRosterSupported = self.client.supportsRememberedRemotes(id)
                 self.startOutputPump()
                 self.refreshNames()
             case .disconnected, .failed:
@@ -141,6 +146,7 @@ final class WiiRemoteBridgeManager: ObservableObject {
                 self.pairingOpen = false
                 self.managementSupported = false
                 self.remoteControlSupported = false
+                self.rememberedRosterSupported = false
                 self.pausedOutputSlots = []
                 if case .failed(let message) = state {
                     self.errorMessage = message
@@ -154,17 +160,23 @@ final class WiiRemoteBridgeManager: ObservableObject {
         client.onBridgeStatus = { [weak self] id, status in
             guard let self, self.selected?.id == id else { return }
             self.pairingOpen = status.pairingOpen
+            let changedSlots = status.connectedSlots.symmetricDifference(Set(self.connectedSlots))
             let added = status.connectedSlots.subtracting(self.connectedSlots)
             let orderChanged = status.playerOrder.map { $0 != self.playerOrder } ?? false
             self.hasStablePlayerStatus = status.playerOrder != nil
             if let order = status.playerOrder { self.playerOrder = order }
             self.synchronizeSlots(status.connectedSlots)
             if orderChanged { self.updateNativeOrder() }
-            // Known remotes need no metadata round-trip when they wake. For a new
-            // remote, let the native extension handshake run before its name read.
-            let missing = added.filter { self.remoteInfo[$0] == nil }
-            if self.managementSupported && !missing.isEmpty {
-                self.metadata.request(Set(missing.map { .remote($0) }), delay: 3)
+            for slot in added {
+                self.remoteSlotGeneration[slot, default: 0] += 1
+                self.remoteInfo[slot] = nil
+            }
+            if self.managementSupported && !added.isEmpty {
+                self.metadata.request(Set(added.map { .remote($0) }), delay: 3)
+            }
+            if self.rememberedRosterSupported && !changedSlots.isEmpty {
+                self.rosterRevision += 1
+                self.metadata.request([.roster], delay: 3)
             }
         }
         client.onWiiReport = { [weak self] id, report in
@@ -271,6 +283,7 @@ final class WiiRemoteBridgeManager: ObservableObject {
         metadata.reset()
         managementSupported = false
         remoteControlSupported = false
+        rememberedRosterSupported = false
         pausedOutputSlots = []
         clearRemotes()
         connection = .disconnected
@@ -332,15 +345,30 @@ final class WiiRemoteBridgeManager: ObservableObject {
             guard generation == connectionGeneration else { throw CancellationError() }
             self.selected = ControllerCandidate(id: id, name: info.name, source: .wiiBridge)
             remember(id: id, name: info.name)
+        case .roster:
+            let revision = rosterRevision
+            let remotes = try await client.rememberedRemotes(via: id)
+            try Task.checkCancellation()
+            guard generation == connectionGeneration, revision == rosterRevision else {
+                throw CancellationError()
+            }
+            rememberedRemotes = remotes
         case .remote(let slot):
+            let slotGeneration = remoteSlotGeneration[slot, default: 0]
             do {
                 let info = try await client.remoteInfo(slot: slot, via: id)
                 try Task.checkCancellation()
-                guard generation == connectionGeneration else { throw CancellationError() }
-                remoteInfo[slot] = info // Publish each successful read; retain the others.
+                guard generation == connectionGeneration,
+                      slotGeneration == remoteSlotGeneration[slot, default: 0] else {
+                    throw CancellationError()
+                }
+                remoteInfo[slot] = info
             } catch BridgeManagementError.rejected(2) {
                 try Task.checkCancellation()
-                if generation == connectionGeneration { remoteInfo[slot] = nil }
+                if generation == connectionGeneration,
+                   slotGeneration == remoteSlotGeneration[slot, default: 0] {
+                    remoteInfo[slot] = nil
+                }
             }
         case .players:
             guard remoteControlSupported else { return }
@@ -353,7 +381,9 @@ final class WiiRemoteBridgeManager: ObservableObject {
     }
     func refreshNames() {
         guard connection == .ready, managementSupported else { return }
-        metadata.request([.bridge, .remote(0), .remote(1), .remote(2), .remote(3), .players])
+        var items: Set<WiiBridgeMetadataRefresh.Item> = [.bridge, .remote(0), .remote(1), .remote(2), .remote(3), .players]
+        if rememberedRosterSupported { items.insert(.roster) }
+        metadata.request(items)
     }
     func openPairing() {
         manage { [weak self] id in
@@ -378,6 +408,32 @@ final class WiiRemoteBridgeManager: ObservableObject {
             try await self.client.renameRemote(remote, name: name, via: id)
             try Task.checkCancellation()
             self.remoteInfo[slot] = try remote.renamed(name)
+        }
+    }
+
+    func renameRememberedRemote(_ remote: BridgeRememberedRemote, name: String) {
+        manage { [weak self] id in
+            guard let self else { return }
+            try await self.client.renameRememberedRemote(remote, name: name, via: id)
+            try Task.checkCancellation()
+            if let index = self.rememberedRemotes.firstIndex(where: { $0.address == remote.address }) {
+                self.rememberedRemotes[index] = try remote.renamed(name)
+            }
+            if let slot = remote.slot, let assigned = self.remoteInfo[slot], assigned.address == remote.address {
+                self.remoteInfo[slot] = try assigned.renamed(name)
+            }
+        }
+    }
+    func forgetRememberedRemote(_ remote: BridgeRememberedRemote) {
+        manage { [weak self] id in
+            guard let self else { return }
+            try await self.client.forgetRememberedRemote(remote, via: id)
+            try Task.checkCancellation()
+            self.rememberedRemotes.removeAll { $0.address == remote.address }
+            if let slot = remote.slot, self.remoteInfo[slot]?.address == remote.address {
+                self.remoteInfo[slot] = nil
+            }
+            self.connectionDetail = "Bridge restarting after forgetting \(remote.name)…"
         }
     }
 
@@ -485,6 +541,10 @@ final class WiiRemoteBridgeManager: ObservableObject {
         pendingOutput.removeAll()
         outputRetryAfter.removeAll()
         connectedSlots = []
+        rememberedRemotes = []
+        remoteSlotGeneration = [:]
+        rosterRevision += 1
+        remoteInfo = [:]
         nativePlayers = [:]
     }
 

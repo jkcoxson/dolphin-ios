@@ -8,9 +8,9 @@ import Foundation
 @MainActor
 final class WiiBridgeMetadataRefresh {
     enum Item: Hashable {
-        case bridge, remote(UInt8), players
+        case bridge, roster, remote(UInt8), players
         var priority: Int {
-            switch self { case .bridge: return 0; case .remote(let slot): return Int(slot) + 1; case .players: return 5 }
+            switch self { case .bridge: return 0; case .roster: return 1; case .remote(let slot): return Int(slot) + 2; case .players: return 6 }
         }
     }
     private let read: (Item) async throws -> Void
